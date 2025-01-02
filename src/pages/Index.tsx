@@ -26,29 +26,61 @@ const Index = () => {
       console.log('Fetching user role...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('No user logged in');
+      
+      console.log('User ID:', session.user.id);
 
       // First check if user is admin using the RPC function
       const { data: isAdmin, error: adminError } = await supabase.rpc('current_user_is_admin');
-      console.log('Is admin check result:', isAdmin);
-      if (adminError) console.error('Admin check error:', adminError);
+      console.log('Is admin check result:', isAdmin, 'Error:', adminError);
+      if (adminError) {
+        console.error('Admin check error:', adminError);
+        toast({
+          title: "Error checking admin status",
+          description: adminError.message,
+          variant: "destructive",
+        });
+      }
       if (isAdmin) return 'admin';
-      
+
       // Then check if user is collector
       const { data: isCollector, error: collectorError } = await supabase.rpc('current_user_is_collector');
-      console.log('Is collector check result:', isCollector);
-      if (collectorError) console.error('Collector check error:', collectorError);
+      console.log('Is collector check result:', isCollector, 'Error:', collectorError);
+      if (collectorError) {
+        console.error('Collector check error:', collectorError);
+        toast({
+          title: "Error checking collector status",
+          description: collectorError.message,
+          variant: "destructive",
+        });
+      }
       if (isCollector) return 'collector';
-      
+
       // Get member profile to verify role
       const { data: memberData, error: memberError } = await supabase
         .from('members')
-        .select('role')
+        .select('role, member_number, auth_user_id')
         .eq('auth_user_id', session.user.id)
         .single();
-      
-      console.log('Member data:', memberData);
-      if (memberError) console.error('Member fetch error:', memberError);
-      
+
+      console.log('Member data:', memberData, 'Error:', memberError);
+      if (memberError) {
+        console.error('Member fetch error:', memberError);
+        toast({
+          title: "Error fetching member data",
+          description: memberError.message,
+          variant: "destructive",
+        });
+      }
+
+      // Additional check for profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('auth_user_id', session.user.id)
+        .single();
+
+      console.log('Profile data:', profileData, 'Error:', profileError);
+
       return memberData?.role || 'member';
     },
   });
