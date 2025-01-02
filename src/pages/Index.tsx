@@ -60,7 +60,7 @@ const Index = () => {
         .from('members')
         .select('role, member_number, auth_user_id')
         .eq('auth_user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
       console.log('Member data:', memberData, 'Error:', memberError);
       if (memberError) {
@@ -77,29 +77,19 @@ const Index = () => {
         .from('profiles')
         .select('id')
         .eq('auth_user_id', session.user.id)
-        .single();
+        .maybeSingle();
 
       console.log('Profile data:', profileData, 'Error:', profileError);
+      
+      // If no member data found, default to member role
+      if (!memberData) {
+        console.log('No member data found, defaulting to member role');
+        return 'member';
+      }
 
-      return memberData?.role || 'member';
+      return memberData.role || 'member';
     },
   });
-
-  useEffect(() => {
-    checkAuth();
-    if (roleData) {
-      console.log('Setting user role:', roleData);
-      setUserRole(roleData);
-      // Reset to dashboard if current tab isn't accessible
-      if (roleData === 'member' && activeTab !== 'dashboard') {
-        setActiveTab('dashboard');
-        toast({
-          title: "Access Restricted",
-          description: "You only have access to the dashboard.",
-        });
-      }
-    }
-  }, [roleData]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -136,6 +126,22 @@ const Index = () => {
         return tab === 'dashboard';
     }
   };
+
+  useEffect(() => {
+    checkAuth();
+    if (roleData) {
+      console.log('Setting user role:', roleData);
+      setUserRole(roleData);
+      // Reset to dashboard if current tab isn't accessible
+      if (roleData === 'member' && activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        toast({
+          title: "Access Restricted",
+          description: "You only have access to the dashboard.",
+        });
+      }
+    }
+  }, [roleData]);
 
   const renderContent = () => {
     if (!canAccessTab(activeTab)) {
