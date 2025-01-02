@@ -20,13 +20,21 @@ const Index = () => {
   const { toast } = useToast();
 
   // Fetch user role
-  const { data: roleData } = useQuery({
+  const { data: roleData, isError: roleError } = useQuery({
     queryKey: ['userRole'],
     queryFn: async () => {
+      console.log('Fetching user role...');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('No user logged in');
+
+      // First check if user is admin
       const { data: isAdmin } = await supabase.rpc('current_user_is_admin');
+      console.log('Is admin check result:', isAdmin);
       if (isAdmin) return 'admin';
       
+      // Then check if user is collector
       const { data: isCollector } = await supabase.rpc('current_user_is_collector');
+      console.log('Is collector check result:', isCollector);
       if (isCollector) return 'collector';
       
       return 'member';
@@ -36,6 +44,7 @@ const Index = () => {
   useEffect(() => {
     checkAuth();
     if (roleData) {
+      console.log('Setting user role:', roleData);
       setUserRole(roleData);
       // Reset to dashboard if current tab isn't accessible
       if (roleData === 'member' && activeTab !== 'dashboard') {
@@ -72,6 +81,7 @@ const Index = () => {
   });
 
   const canAccessTab = (tab: string) => {
+    console.log('Checking access for tab:', tab, 'User role:', userRole);
     switch (userRole) {
       case 'admin':
         return true;
