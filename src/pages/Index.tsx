@@ -27,17 +27,29 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('No user logged in');
 
-      // First check if user is admin
-      const { data: isAdmin } = await supabase.rpc('current_user_is_admin');
+      // First check if user is admin using the RPC function
+      const { data: isAdmin, error: adminError } = await supabase.rpc('current_user_is_admin');
       console.log('Is admin check result:', isAdmin);
+      if (adminError) console.error('Admin check error:', adminError);
       if (isAdmin) return 'admin';
       
       // Then check if user is collector
-      const { data: isCollector } = await supabase.rpc('current_user_is_collector');
+      const { data: isCollector, error: collectorError } = await supabase.rpc('current_user_is_collector');
       console.log('Is collector check result:', isCollector);
+      if (collectorError) console.error('Collector check error:', collectorError);
       if (isCollector) return 'collector';
       
-      return 'member';
+      // Get member profile to verify role
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('role')
+        .eq('auth_user_id', session.user.id)
+        .single();
+      
+      console.log('Member data:', memberData);
+      if (memberError) console.error('Member fetch error:', memberError);
+      
+      return memberData?.role || 'member';
     },
   });
 
