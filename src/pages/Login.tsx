@@ -38,6 +38,7 @@ const Login = () => {
 
       // If sign in fails because user doesn't exist, try to sign up
       if (signInError?.message === 'Invalid login credentials') {
+        console.log('User not found, attempting signup...');
         const { error: signUpError } = await supabase.auth.signUp({
           email: email,
           password: memberNumber,
@@ -69,6 +70,7 @@ const Login = () => {
 
       navigate('/');
     } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: error.message,
