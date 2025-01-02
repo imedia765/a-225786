@@ -10,15 +10,43 @@ import MemberSearch from '@/components/MemberSearch';
 import { Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Fetch user role
+  const { data: roleData } = useQuery({
+    queryKey: ['userRole'],
+    queryFn: async () => {
+      const { data: isAdmin } = await supabase.rpc('current_user_is_admin');
+      if (isAdmin) return 'admin';
+      
+      const { data: isCollector } = await supabase.rpc('current_user_is_collector');
+      if (isCollector) return 'collector';
+      
+      return 'member';
+    },
+  });
 
   useEffect(() => {
     checkAuth();
-  }, []);
+    if (roleData) {
+      setUserRole(roleData);
+      // Reset to dashboard if current tab isn't accessible
+      if (roleData === 'member' && activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        toast({
+          title: "Access Restricted",
+          description: "You only have access to the dashboard.",
+        });
+      }
+    }
+  }, [roleData]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -43,7 +71,24 @@ const Index = () => {
     },
   });
 
+  const canAccessTab = (tab: string) => {
+    switch (userRole) {
+      case 'admin':
+        return true;
+      case 'collector':
+        return ['dashboard', 'users'].includes(tab);
+      case 'member':
+      default:
+        return tab === 'dashboard';
+    }
+  };
+
   const renderContent = () => {
+    if (!canAccessTab(activeTab)) {
+      setActiveTab('dashboard');
+      return <DashboardView onLogout={handleLogout} />;
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return <DashboardView onLogout={handleLogout} />;
@@ -67,7 +112,7 @@ const Index = () => {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
-            <MembersList searchTerm={searchTerm} />
+            <MembersList searchTerm={searchTerm} userRole={userRole} />
           </>
         );
       case 'collectors':
@@ -107,7 +152,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-dashboard-dark">
-      <SidePanel onTabChange={setActiveTab} />
+      <SidePanel onTabChange={setActiveTab} userRole={userRole} />
       <div className="pl-64">
         <div className="p-8">
           {renderContent()}

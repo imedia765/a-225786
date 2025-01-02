@@ -7,9 +7,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 type Member = Database['public']['Tables']['members']['Row'];
 
-const MembersList = ({ searchTerm }: { searchTerm: string }) => {
+interface MembersListProps {
+  searchTerm: string;
+  userRole: string | null;
+}
+
+const MembersList = ({ searchTerm, userRole }: MembersListProps) => {
   const { data: members, isLoading, error } = useQuery({
-    queryKey: ['members', searchTerm],
+    queryKey: ['members', searchTerm, userRole],
     queryFn: async () => {
       console.log('Fetching members...');
       let query = supabase
@@ -18,6 +23,22 @@ const MembersList = ({ searchTerm }: { searchTerm: string }) => {
       
       if (searchTerm) {
         query = query.or(`full_name.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%,collector.ilike.%${searchTerm}%`);
+      }
+
+      // If user is a collector, only show their assigned members
+      if (userRole === 'collector') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: collectorProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('auth_user_id', user.id)
+            .single();
+          
+          if (collectorProfile) {
+            query = query.eq('collector', collectorProfile.full_name);
+          }
+        }
       }
       
       const { data, error } = await query
