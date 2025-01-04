@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, Settings, Users, UserCheck } from "lucide-react";
+import { UserRole } from "@/hooks/useRoleAccess";
 
 interface SidePanelProps {
   onTabChange: (value: string) => void;
-  userRole: string | null;
+  userRole: UserRole;
 }
 
 const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
@@ -17,7 +18,7 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
       },
       {
         value: 'users',
-        label: 'Users',
+        label: 'Members',
         icon: Users,
         roles: ['collector', 'admin']
       },
@@ -35,7 +36,11 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
       }
     ];
 
-    return tabs.filter(tab => tab.roles.includes(userRole || 'member'));
+    // Only show tabs that the user has access to based on their role
+    return tabs.filter(tab => {
+      if (!userRole) return false;
+      return tab.roles.includes(userRole);
+    });
   };
 
   return (
