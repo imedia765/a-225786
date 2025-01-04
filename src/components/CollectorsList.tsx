@@ -46,8 +46,7 @@ const CollectorsList = () => {
           active,
           created_at,
           updated_at,
-          member_profile_id,
-          collector_profile_id
+          member_number
         `)
         .order('number', { ascending: true });
       
@@ -61,23 +60,11 @@ const CollectorsList = () => {
           .from('members')
           .select('*', { count: 'exact', head: true })
           .eq('collector', collector.name);
-
-        // Only fetch member number if member_profile_id exists
-        let memberNumber = null;
-        if (collector.member_profile_id) {
-          const { data: memberData } = await supabase
-            .from('members')
-            .select('member_number')
-            .eq('id', collector.member_profile_id)
-            .maybeSingle();
-          
-          memberNumber = memberData?.member_number || null;
-        }
         
         return {
           ...collector,
           memberCount: count || 0,
-          memberNumber
+          memberNumber: collector.member_number
         };
       }) || []);
 
