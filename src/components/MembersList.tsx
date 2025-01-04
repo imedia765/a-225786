@@ -30,7 +30,16 @@ const MembersList = ({ searchTerm, userRole }: MembersListProps) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           console.log('Filtering members for collector:', user.id);
-          query = query.eq('collector_id', user.id);
+          // First get the collector's name
+          const { data: collectorData } = await supabase
+            .from('members_collectors')
+            .select('name')
+            .single();
+          
+          if (collectorData?.name) {
+            console.log('Filtering by collector name:', collectorData.name);
+            query = query.eq('collector', collectorData.name);
+          }
         }
       }
       
