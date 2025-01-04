@@ -26,7 +26,7 @@ export const findMemberByNumber = async (memberNumber: string) => {
       const { data: fuzzyMember, error: fuzzyError } = await supabase
         .from('members')
         .select('id, member_number, auth_user_id')
-        .ilike('member_number', formattedMemberNumber)
+        .ilike('member_number', `%${formattedMemberNumber}%`)
         .maybeSingle();
 
       console.log('Fuzzy member search result:', { fuzzyMember, fuzzyError });
