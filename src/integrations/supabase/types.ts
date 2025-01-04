@@ -165,12 +165,10 @@ export type Database = {
       members_collectors: {
         Row: {
           active: boolean | null
-          collector_profile_id: string | null
           created_at: string
           email: string | null
           id: string
           member_number: string | null
-          member_profile_id: string | null
           name: string | null
           number: string | null
           phone: string | null
@@ -179,12 +177,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
-          collector_profile_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
           member_number?: string | null
-          member_profile_id?: string | null
           name?: string | null
           number?: string | null
           phone?: string | null
@@ -193,34 +189,17 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
-          collector_profile_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
           member_number?: string | null
-          member_profile_id?: string | null
           name?: string | null
           number?: string | null
           phone?: string | null
           prefix?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "members_collectors_collector_profile_id_fkey"
-            columns: ["collector_profile_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "members_collectors_member_profile_id_fkey"
-            columns: ["member_profile_id"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
