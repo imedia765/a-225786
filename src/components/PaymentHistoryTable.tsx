@@ -9,6 +9,7 @@ import {
 import { format } from "date-fns";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle } from "lucide-react";
 
 interface Payment {
   id: string;
@@ -24,7 +25,10 @@ const PaymentHistoryTable = () => {
     queryFn: async () => {
       console.log('Fetching payment history...');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('No user logged in');
+      if (!session?.user) {
+        console.error('No user session found');
+        throw new Error('No user logged in');
+      }
 
       // First get the member number from the user metadata
       const { data: { user } } = await supabase.auth.getUser();
@@ -84,7 +88,10 @@ const PaymentHistoryTable = () => {
     return (
       <div className="glass-card p-4">
         <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
-        <div className="text-white">No payment history found.</div>
+        <div className="flex items-center gap-2 text-white">
+          <AlertCircle className="h-4 w-4" />
+          <span>No payment history found. New payments will appear here once processed.</span>
+        </div>
       </div>
     );
   }
