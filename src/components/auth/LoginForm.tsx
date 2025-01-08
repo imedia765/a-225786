@@ -23,12 +23,13 @@ const LoginForm = () => {
     console.log('Starting login process on device type:', isMobile ? 'mobile' : 'desktop');
 
     try {
-      // First, verify member exists
+      // First, verify member exists and is active
       console.log('Verifying member:', memberNumber);
       const { data: members, error: memberError } = await supabase
         .from('members')
-        .select('id, member_number')
+        .select('id, member_number, status')
         .eq('member_number', memberNumber)
+        .eq('status', 'active')
         .limit(1);
 
       if (memberError) {
@@ -37,7 +38,7 @@ const LoginForm = () => {
       }
 
       if (!members || members.length === 0) {
-        throw new Error('Member not found');
+        throw new Error('Member not found or inactive');
       }
 
       const member = members[0];
@@ -55,7 +56,7 @@ const LoginForm = () => {
       });
 
       // If sign in fails due to invalid credentials, try to sign up
-      if (signInError && signInError.message === 'Invalid login credentials') {
+      if (signInError && signInError.message.includes('Invalid login credentials')) {
         console.log('Sign in failed, attempting signup');
         
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -87,7 +88,19 @@ const LoginForm = () => {
             throw updateError;
           }
 
-          console.log('Member updated, attempting final sign in');
+          // Add default member role
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert([
+              { user_id: signUpData.user.id, role: 'member' }
+            ]);
+
+          if (roleError) {
+            console.error('Error adding member role:', roleError);
+            throw roleError;
+          }
+
+          console.log('Member updated and role assigned, attempting final sign in');
           
           // Final sign in attempt after successful signup
           const { data: finalSignInData, error: finalSignInError } = await supabase.auth.signInWithPassword({
@@ -148,9 +161,19 @@ const LoginForm = () => {
       // Clear any existing session
       await supabase.auth.signOut();
       
+      let errorMessage = 'An unexpected error occurred';
+      
+      if (error.message.includes('Member not found')) {
+        errorMessage = 'Member number not found or inactive';
+      } else if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid member number. Please try again.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = 'Please verify your email before logging in';
+      }
+      
       toast({
         title: "Login failed",
-        description: error.message || 'An unexpected error occurred',
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -169,7 +192,7 @@ const LoginForm = () => {
             id="memberNumber"
             type="text"
             value={memberNumber}
-            onChange={(e) => setMemberNumber(e.target.value)}
+            onChange={(e) => setMemberNumber(e.target.value.toUpperCase())}
             placeholder="Enter your member number"
             className="w-full"
             required
