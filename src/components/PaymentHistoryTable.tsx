@@ -19,7 +19,7 @@ interface Payment {
 }
 
 const PaymentHistoryTable = () => {
-  const { data: payments = [], isLoading } = useQuery({
+  const { data: payments = [], isLoading, error } = useQuery({
     queryKey: ['payment-history'],
     queryFn: async () => {
       console.log('Fetching payment history...');
@@ -29,6 +29,8 @@ const PaymentHistoryTable = () => {
       // First get the member number from the user metadata
       const { data: { user } } = await supabase.auth.getUser();
       const memberNumber = user?.user_metadata?.member_number;
+      
+      console.log('Member number from metadata:', memberNumber);
       
       if (!memberNumber) {
         console.error('No member number found in user metadata');
@@ -42,7 +44,12 @@ const PaymentHistoryTable = () => {
         .eq('member_number', memberNumber)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching payment requests:', error);
+        throw error;
+      }
+
+      console.log('Fetched payment requests:', data);
 
       // Transform the data to match our Payment interface
       return data.map(payment => ({
@@ -60,6 +67,24 @@ const PaymentHistoryTable = () => {
       <div className="glass-card p-4">
         <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
         <div className="text-white">Loading payment history...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="glass-card p-4">
+        <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
+        <div className="text-red-500">Error loading payment history: {error.message}</div>
+      </div>
+    );
+  }
+
+  if (!payments.length) {
+    return (
+      <div className="glass-card p-4">
+        <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
+        <div className="text-white">No payment history found.</div>
       </div>
     );
   }
