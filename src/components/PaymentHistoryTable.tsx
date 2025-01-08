@@ -9,7 +9,8 @@ import {
 import { format } from "date-fns";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Payment {
   id: string;
@@ -20,42 +21,68 @@ interface Payment {
 }
 
 const PaymentHistoryTable = () => {
+  const { toast } = useToast();
+
   const { data: payments = [], isLoading, error } = useQuery({
     queryKey: ['payment-history'],
     queryFn: async () => {
-      console.log('Fetching payment history...');
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Starting payment history fetch...');
+      
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Failed to get session');
+      }
+      
       if (!session?.user) {
         console.error('No user session found');
         throw new Error('No user logged in');
       }
-
-      // First get the member number from the user metadata
-      const { data: { user } } = await supabase.auth.getUser();
-      const memberNumber = user?.user_metadata?.member_number;
       
+      console.log('Session found for user:', session.user.id);
+
+      // Get user metadata
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('User fetch error:', userError);
+        throw new Error('Failed to get user data');
+      }
+
+      const memberNumber = user?.user_metadata?.member_number;
       console.log('Member number from metadata:', memberNumber);
       
       if (!memberNumber) {
         console.error('No member number found in user metadata');
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Member number not found in user profile",
+        });
         throw new Error('Member number not found');
       }
 
-      // Fetch payment requests for this member
-      const { data, error } = await supabase
+      // Fetch payment requests
+      const { data, error: paymentsError } = await supabase
         .from('payment_requests')
         .select('*')
         .eq('member_number', memberNumber)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching payment requests:', error);
-        throw error;
+      if (paymentsError) {
+        console.error('Error fetching payment requests:', paymentsError);
+        throw paymentsError;
       }
 
       console.log('Fetched payment requests:', data);
 
-      // Transform the data to match our Payment interface
+      if (!data || data.length === 0) {
+        console.log('No payment records found for member:', memberNumber);
+      }
+
+      // Transform the data
       return data.map(payment => ({
         id: payment.id,
         date: payment.created_at,
@@ -64,13 +91,17 @@ const PaymentHistoryTable = () => {
         status: payment.status
       }));
     },
+    retry: 1,
   });
 
   if (isLoading) {
     return (
       <div className="glass-card p-4">
         <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
-        <div className="text-white">Loading payment history...</div>
+        <div className="flex items-center gap-2 text-white">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading payment history...</span>
+        </div>
       </div>
     );
   }
@@ -79,7 +110,10 @@ const PaymentHistoryTable = () => {
     return (
       <div className="glass-card p-4">
         <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
-        <div className="text-red-500">Error loading payment history: {error.message}</div>
+        <div className="flex items-center gap-2 text-red-500">
+          <AlertCircle className="h-4 w-4" />
+          <span>Error loading payment history: {error.message}</span>
+        </div>
       </div>
     );
   }
@@ -90,7 +124,7 @@ const PaymentHistoryTable = () => {
         <h3 className="text-xl font-semibold mb-4 text-white">Payment History</h3>
         <div className="flex items-center gap-2 text-white">
           <AlertCircle className="h-4 w-4" />
-          <span>No payment history found. New payments will appear here once processed.</span>
+          <span>No payment history found. Please check if you have any pending payments or contact your collector for assistance.</span>
         </div>
       </div>
     );
