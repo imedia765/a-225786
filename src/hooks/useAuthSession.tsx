@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export const useAuthSession = () => {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -24,7 +24,12 @@ export const useAuthSession = () => {
       setSession(null);
       await queryClient.resetQueries();
       localStorage.clear();
-      await supabase.auth.signOut();
+      
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error during sign out:', signOutError);
+      }
       
       toast({
         title: "Session expired",
@@ -32,7 +37,8 @@ export const useAuthSession = () => {
         variant: "destructive",
       });
 
-      window.location.href = '/login';
+      // Don't redirect here, let ProtectedRoutes handle it
+      setLoading(false);
     }
   };
 
@@ -77,13 +83,14 @@ export const useAuthSession = () => {
       if (!mounted) return;
       
       console.log('Auth state changed:', _event, currentSession?.user?.id);
+      setLoading(true); // Set loading true on auth state change
       
       if (_event === 'SIGNED_OUT') {
         console.log('User signed out, clearing session and queries');
         setSession(null);
         queryClient.resetQueries();
         localStorage.clear();
-        window.location.href = '/login';
+        setLoading(false);
         return;
       }
 
@@ -93,10 +100,12 @@ export const useAuthSession = () => {
         if (_event === 'SIGNED_IN') {
           queryClient.resetQueries();
         }
+        setLoading(false);
         return;
       }
 
       setSession(currentSession);
+      setLoading(false);
     });
 
     return () => {
