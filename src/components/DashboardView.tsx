@@ -1,125 +1,118 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import MetricCard from './MetricCard';
-import { Loader2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import MemberProfileCard from './MemberProfileCard';
+import SystemAnnouncements from './SystemAnnouncements';
+import PaymentDialog from './members/PaymentDialog';
+import PaymentHistoryTable from './PaymentHistoryTable';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 
 const DashboardView = () => {
-  const { data: memberStats, isLoading: membersLoading } = useQuery({
-    queryKey: ['memberStats'],
+  const { toast } = useToast();
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const { data: memberProfile, isError } = useQuery({
+    queryKey: ['memberProfile'],
     queryFn: async () => {
-      const { data: members, error: membersError } = await supabase
+      console.log('Fetching member profile...');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error('No user logged in');
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const memberNumber = user?.user_metadata?.member_number;
+      
+      if (!memberNumber) {
+        console.error('No member number found in user metadata');
+        throw new Error('Member number not found');
+      }
+
+      console.log('Fetching member with number:', memberNumber);
+      
+      let query = supabase
         .from('members')
         .select('*');
       
-      if (membersError) throw membersError;
+      query = query.or(`member_number.eq.${memberNumber},auth_user_id.eq.${session.user.id}`);
       
-      return {
-        total: members.length,
-        active: members.filter(m => m.status === 'active').length,
-        verified: members.filter(m => m.verified).length
-      };
-    }
-  });
+      const { data, error } = await query.maybeSingle();
 
-  const { data: familyStats, isLoading: familyLoading } = useQuery({
-    queryKey: ['familyStats'],
-    queryFn: async () => {
-      const { data: familyMembers, error: familyError } = await supabase
-        .from('family_members')
-        .select('relationship');
-      
-      if (familyError) throw familyError;
-      
-      return {
-        total: familyMembers.length,
-        spouses: familyMembers.filter(fm => fm.relationship === 'spouse').length,
-        dependants: familyMembers.filter(fm => fm.relationship === 'dependant').length
-      };
-    }
-  });
+      if (error) {
+        console.error('Error fetching member:', error);
+        toast({
+          variant: "destructive",
+          title: "Error fetching member profile",
+          description: error.message
+        });
+        throw error;
+      }
 
-  if (membersLoading || familyLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-dashboard-accent1" />
-      </div>
-    );
-  }
+      if (!data) {
+        console.error('No member found with number:', memberNumber);
+        toast({
+          variant: "destructive",
+          title: "Member not found",
+          description: "Could not find your member profile"
+        });
+        throw new Error('Member not found');
+      }
+      
+      return data;
+    },
+  });
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-3xl font-medium mb-2 text-white">Dashboard</h1>
-        <p className="text-dashboard-muted">Overview of system statistics</p>
+    <div className="w-full px-2 sm:px-0 pt-[calc(6rem+1px)] lg:pt-[calc(8rem+1px)]">
+      <header className="mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+          <h1 className="text-2xl sm:text-3xl font-medium mb-2 sm:mb-0 text-dashboard-softBlue">Dashboard</h1>
+          <div className="flex flex-col items-end">
+            <p className="text-dashboard-accent1 font-medium">
+              {format(currentTime, 'EEEE, MMMM do yyyy')}
+            </p>
+            <p className="text-dashboard-accent2 text-lg">
+              {format(currentTime, 'h:mm:ss a')}
+            </p>
+          </div>
+        </div>
+        <p className="text-dashboard-text">Welcome back!</p>
       </header>
+      
+      <div className="grid gap-4 sm:gap-6">
+        <div className="overflow-hidden">
+          <MemberProfileCard memberProfile={memberProfile} />
+        </div>
+        
+        <div className="overflow-hidden">
+          {memberProfile && (
+            <PaymentDialog 
+              isOpen={isPaymentDialogOpen}
+              onClose={() => setIsPaymentDialogOpen(false)}
+              memberId={memberProfile.id}
+              memberNumber={memberProfile.member_number}
+              memberName={memberProfile.full_name}
+              collectorInfo={null}
+            />
+          )}
+        </div>
 
-      <Tabs defaultValue="members" className="space-y-6">
-        <TabsList className="grid grid-cols-2 gap-4 bg-dashboard-card p-1">
-          <TabsTrigger 
-            value="members"
-            className="data-[state=active]:bg-dashboard-accent1 data-[state=active]:text-white"
-          >
-            Members
-          </TabsTrigger>
-          <TabsTrigger 
-            value="family"
-            className="data-[state=active]:bg-dashboard-accent1 data-[state=active]:text-white"
-          >
-            Family Members
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-hidden">
+          <SystemAnnouncements />
+        </div>
 
-        <TabsContent value="members" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricCard
-              title="Total Members"
-              value={memberStats?.total || 0}
-              color="#22c55e"
-              details="Total number of registered members"
-            />
-            <MetricCard
-              title="Active Members"
-              value={(memberStats?.active / (memberStats?.total || 1) * 100) || 0}
-              color="#3b82f6"
-              details="Percentage of active members"
-              threshold={80}
-            />
-            <MetricCard
-              title="Verified Members"
-              value={(memberStats?.verified / (memberStats?.total || 1) * 100) || 0}
-              color="#f59e0b"
-              details="Percentage of verified members"
-              threshold={90}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="family" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricCard
-              title="Total Family Members"
-              value={familyStats?.total || 0}
-              color="#22c55e"
-              details="Total number of registered family members"
-            />
-            <MetricCard
-              title="Spouses"
-              value={(familyStats?.spouses / (familyStats?.total || 1) * 100) || 0}
-              color="#3b82f6"
-              details="Percentage of spouse relationships"
-            />
-            <MetricCard
-              title="Dependants"
-              value={(familyStats?.dependants / (familyStats?.total || 1) * 100) || 0}
-              color="#f59e0b"
-              details="Percentage of dependant relationships"
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+        <div className="overflow-x-auto">
+          <PaymentHistoryTable />
+        </div>
+      </div>
     </div>
   );
 };

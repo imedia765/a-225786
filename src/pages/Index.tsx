@@ -108,8 +108,8 @@ const Index = () => {
         return <DashboardView />;
       case 'users':
         return (
-          <div className="space-y-6">
-            <header>
+          <>
+            <header className="mb-8">
               <h1 className="text-3xl font-medium mb-2 text-white">Members</h1>
               <p className="text-dashboard-muted">View and manage member information</p>
             </header>
@@ -118,7 +118,7 @@ const Index = () => {
               onSearchChange={setSearchTerm}
             />
             <MembersList searchTerm={searchTerm} userRole={userRole} />
-          </div>
+          </>
         );
       case 'financials':
         return <CollectorFinancialsView />;
