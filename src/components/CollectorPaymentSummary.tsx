@@ -18,7 +18,8 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
       
       console.log('Fetching payment stats for collector:', collectorName);
       
-      const { data: members, error } = await supabase
+      // Fetch members data
+      const { data: members, error: membersError } = await supabase
         .from('members')
         .select(`
           yearly_payment_status,
@@ -29,9 +30,16 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
           payment_date,
           payment_type,
           status,
-          created_at
+          created_at,
+          id
         `)
         .eq('collector', collectorName);
+
+      // Fetch family members data
+      const { data: familyMembers, error: familyError } = await supabase
+        .from('family_members')
+        .select('*')
+        .in('member_id', members?.map(m => m.id) || []);
 
       // Fetch pending payments for this collector
       const { data: pendingPayments, error: pendingError } = await supabase
@@ -40,17 +48,22 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
         .eq('status', 'pending')
         .eq('members_collectors.name', collectorName);
       
-      if (error || pendingError) {
-        console.error('Error fetching payment stats:', error || pendingError);
-        throw error || pendingError;
+      if (membersError || pendingError || familyError) {
+        console.error('Error fetching payment stats:', membersError || pendingError || familyError);
+        throw membersError || pendingError || familyError;
       }
 
       const currentDate = new Date();
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      const totalFamilyMembers = familyMembers?.length || 0;
+      const totalMembers = (members?.length || 0) + totalFamilyMembers;
+
       const stats = {
-        totalMembers: members?.length || 0,
+        totalMembers,
+        totalDirectMembers: members?.length || 0,
+        totalFamilyMembers,
         pendingPayments: {
           count: pendingPayments?.length || 0,
           amount: pendingPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
@@ -118,16 +131,16 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
   if (!paymentStats) return null;
 
   const yearlyPaymentPercentage = Math.round(
-    (paymentStats.yearlyPayments.completed / paymentStats.totalMembers) * 100
+    (paymentStats.yearlyPayments.completed / paymentStats.totalDirectMembers) * 100
   );
 
   const emergencyPaymentPercentage = Math.round(
-    (paymentStats.emergencyCollections.completed / paymentStats.totalMembers) * 100
+    (paymentStats.emergencyCollections.completed / paymentStats.totalDirectMembers) * 100
   );
 
-  const totalYearlyAmount = paymentStats.totalMembers * 40;
+  const totalYearlyAmount = paymentStats.totalDirectMembers * 40;
   const collectedYearlyAmount = paymentStats.yearlyPayments.totalCollected;
-  const remainingMembers = paymentStats.totalMembers - paymentStats.yearlyPayments.completed;
+  const remainingMembers = paymentStats.totalDirectMembers - paymentStats.yearlyPayments.completed;
 
   return (
     <div className="space-y-6">
@@ -187,7 +200,7 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
                 </p>
                 <p className="text-sm text-dashboard-muted">Total collected</p>
                 <p className="text-sm text-dashboard-accent1 mt-1">
-                  {paymentStats.emergencyCollections.completed}/{paymentStats.totalMembers} members paid
+                  {paymentStats.emergencyCollections.completed}/{paymentStats.totalDirectMembers} members paid
                 </p>
                 {paymentStats.recentActivity.lastPaymentDate && (
                   <p className="text-sm text-dashboard-accent2 mt-2">
@@ -222,10 +235,13 @@ const CollectorPaymentSummary = ({ collectorName }: PaymentSummaryProps) => {
               <h4 className="text-dashboard-accent1 font-medium">Membership Status</h4>
             </div>
             <p className="text-xl font-bold text-white">
-              {paymentStats?.membershipStats.active} Active
+              {paymentStats.totalMembers} Total Members
             </p>
             <p className="text-sm text-dashboard-muted">
-              {paymentStats?.membershipStats.inactive} Inactive
+              {paymentStats.totalDirectMembers} Direct Members
+            </p>
+            <p className="text-sm text-dashboard-muted">
+              {paymentStats.totalFamilyMembers} Family Members
             </p>
           </div>
 
