@@ -6,7 +6,6 @@ import MembersList from '@/components/MembersList';
 import MemberSearch from '@/components/MemberSearch';
 import SystemToolsView from '@/components/SystemToolsView';
 import CollectorFinancialsView from '@/components/CollectorFinancialsView';
-import MemberStatsView from '@/components/members/MemberStatsView';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { useToast } from "@/hooks/use-toast";
 import MainLayout from '@/components/layout/MainLayout';
@@ -120,8 +119,6 @@ const Index = () => {
             <MembersList searchTerm={searchTerm} userRole={userRole} />
           </>
         );
-      case 'memberstats':
-        return <MemberStatsView />;
       case 'financials':
         return <CollectorFinancialsView />;
       case 'system':
