@@ -57,16 +57,30 @@ export function useAuthSession() {
   const handleAuthError = async (error: AuthError) => {
     console.error('Auth error:', error);
     
+    // Check specifically for refresh token errors
     if (error.message.includes('refresh_token_not_found') || 
-        error.message.includes('invalid refresh token')) {
+        error.message.includes('invalid refresh token') ||
+        error.message.includes('Invalid Refresh Token')) {
       console.log('Token refresh failed, signing out...');
-      await handleSignOut();
+      
+      // Clear any existing session data
+      await queryClient.resetQueries();
+      await queryClient.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Force sign out without attempting to use the refresh token
+      await supabase.auth.signOut();
+      setSession(null);
       
       toast({
         title: "Session Expired",
         description: "Please sign in again",
         variant: "destructive",
       });
+      
+      // Redirect to login
+      window.location.href = '/login';
     } else {
       toast({
         title: "Authentication Error",
@@ -125,7 +139,7 @@ export function useAuthSession() {
         userId: currentSession?.user?.id
       });
       
-      if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !currentSession) {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !currentSession)) {
         console.log('User signed out or token refresh failed');
         await handleSignOut();
         return;
