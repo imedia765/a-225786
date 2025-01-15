@@ -42,22 +42,11 @@ const CollectorFinancialsView = () => {
       // Get all members without pagination for total calculations
       const { data: members, error: membersError } = await supabase
         .from('members')
-        .select('id, yearly_payment_amount, emergency_collection_amount, yearly_payment_status, emergency_collection_status');
+        .select('yearly_payment_amount, emergency_collection_amount, yearly_payment_status, emergency_collection_status');
 
       if (membersError) {
         console.error('Error fetching members:', membersError);
         throw membersError;
-      }
-
-      // Get all family members
-      const { data: familyMembers, error: familyError } = await supabase
-        .from('family_members')
-        .select('*')
-        .in('member_id', members?.map(m => m.id) || []);
-
-      if (familyError) {
-        console.error('Error fetching family members:', familyError);
-        throw familyError;
       }
 
       // Calculate total amount collected from approved payments
@@ -84,19 +73,11 @@ const CollectorFinancialsView = () => {
       const totalCollectionDue = totalYearlyDue + totalEmergencyDue;
       const remainingCollection = totalCollectionDue - totalAmount;
 
-      // Calculate total covered members (direct + family)
-      const totalDirectMembers = members?.length || 0;
-      const totalFamilyMembers = familyMembers?.length || 0;
-      const totalCoveredMembers = totalDirectMembers + totalFamilyMembers;
-
       console.log('Calculated totals:', {
         totalCollected: totalAmount,
         pendingAmount,
         remainingAmount: remainingCollection,
-        totalCollectors: collectors?.length || 0,
-        totalCoveredMembers,
-        totalDirectMembers,
-        totalFamilyMembers
+        totalCollectors: collectors?.length || 0
       });
 
       return {
@@ -104,10 +85,7 @@ const CollectorFinancialsView = () => {
         pendingAmount: pendingAmount,
         remainingAmount: remainingCollection,
         totalCollectors: collectors?.length || 0,
-        totalTransactions: payments?.length || 0,
-        totalCoveredMembers,
-        totalDirectMembers,
-        totalFamilyMembers
+        totalTransactions: payments?.length || 0
       };
     }
   });
@@ -165,8 +143,8 @@ const CollectorFinancialsView = () => {
           <div className="glass-card p-2 sm:p-3 md:p-4">
             <TotalCount
               items={[{
-                count: totals.totalCoveredMembers,
-                label: `Total Members (${totals.totalDirectMembers} Direct + ${totals.totalFamilyMembers} Family)`,
+                count: totals.totalCollectors,
+                label: "Active Collectors",
                 icon: <Users className="h-3.5 sm:h-4 md:h-5 w-3.5 sm:w-4 md:w-5 text-indigo-400" />,
                 onPrint: handlePrint
               }]}
