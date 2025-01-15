@@ -6,7 +6,8 @@ import {
   Users, 
   Settings,
   Wallet,
-  LogOut
+  LogOut,
+  ChartBar
 } from "lucide-react";
 import { UserRole } from "@/hooks/useRoleAccess";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -48,14 +49,25 @@ const SidePanel = ({ onTabChange, userRole }: SidePanelProps) => {
           </Button>
 
           {(isAdmin || isCollector) && (
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-sm"
-              onClick={() => onTabChange('users')}
-            >
-              <Users className="h-4 w-4" />
-              Members
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 text-sm"
+                onClick={() => onTabChange('users')}
+              >
+                <Users className="h-4 w-4" />
+                Members
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 text-sm"
+                onClick={() => onTabChange('memberstats')}
+              >
+                <ChartBar className="h-4 w-4" />
+                Member Stats
+              </Button>
+            </>
           )}
 
           {isAdmin && (
