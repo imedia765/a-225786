@@ -11,6 +11,9 @@ import {
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useToast } from "@/components/ui/use-toast";
+import { Database } from "@/integrations/supabase/types";
+
+type UserRole = Database['public']['Enums']['app_role'];
 
 interface SidePanelProps {
   onTabChange: (tab: string) => void;
@@ -19,11 +22,11 @@ interface SidePanelProps {
 
 const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
-  const { userRole } = useRoleAccess();
+  const { userRole, hasRole } = useRoleAccess();
   const { toast } = useToast();
   
   console.log('SidePanel rendered with role:', userRole);
-  
+
   const handleLogoutClick = () => {
     handleSignOut(false);
   };
@@ -31,16 +34,13 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const handleTabChange = (tab: string) => {
     console.log('Tab change requested:', tab, 'Current role:', userRole);
     
-    // Define role-based access rules
-    const tabAccess: Record<string, string[]> = {
-      dashboard: ['admin', 'collector', 'member'],
-      users: ['admin', 'collector'],
-      financials: ['admin'],
-      system: ['admin']
-    };
+    if (!userRole) {
+      console.log('No user role available');
+      return;
+    }
 
-    const hasAccess = userRole && tabAccess[tab]?.includes(userRole);
-    console.log('Access check:', { tab, userRole, hasAccess, allowedRoles: tabAccess[tab] });
+    const hasAccess = shouldShowTab(tab);
+    console.log('Access check:', { tab, userRole, hasAccess });
 
     if (hasAccess) {
       onTabChange(tab);
@@ -53,15 +53,20 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
     }
   };
 
-  // Helper function to determine if a tab should be visible
   const shouldShowTab = (tab: string): boolean => {
-    const tabAccess: Record<string, string[]> = {
-      dashboard: ['admin', 'collector', 'member'],
-      users: ['admin', 'collector'],
-      financials: ['admin'],
-      system: ['admin']
-    };
-    return userRole ? tabAccess[tab]?.includes(userRole) : false;
+    if (!userRole) return false;
+
+    switch (tab) {
+      case 'dashboard':
+        return true; // All roles can access dashboard
+      case 'users':
+        return hasRole('admin') || hasRole('collector');
+      case 'financials':
+      case 'system':
+        return hasRole('admin');
+      default:
+        return false;
+    }
   };
 
   return (

@@ -27,7 +27,9 @@ export const useRoleAccess = () => {
   } = useRoleStore() as RoleState;
 
   const hasRole = (role: UserRole): boolean => {
-    return !!userRoles?.includes(role);
+    console.log('Checking role:', { role, userRole, userRoles });
+    if (!userRoles) return false;
+    return userRoles.includes(role);
   };
 
   const hasAnyRole = (roles: UserRole[]): boolean => {
@@ -37,19 +39,17 @@ export const useRoleAccess = () => {
   const canAccessTab = (tab: string): boolean => {
     if (!userRoles) return false;
 
-    if (hasRole('admin')) {
-      return ['dashboard', 'users', 'collectors', 'audit', 'system', 'financials'].includes(tab);
+    switch (tab) {
+      case 'dashboard':
+        return true;
+      case 'users':
+        return hasRole('admin') || hasRole('collector');
+      case 'financials':
+      case 'system':
+        return hasRole('admin');
+      default:
+        return false;
     }
-    
-    if (hasRole('collector')) {
-      return ['dashboard', 'users'].includes(tab);
-    }
-    
-    if (hasRole('member')) {
-      return tab === 'dashboard';
-    }
-
-    return false;
   };
 
   const hasPermission = (permission: keyof RoleState['permissions']): boolean => {
