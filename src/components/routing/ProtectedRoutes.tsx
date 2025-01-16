@@ -8,6 +8,9 @@ import { useRoleSync } from "@/hooks/useRoleSync";
 import { Loader2 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardView from "@/components/DashboardView";
+import MembersList from "@/components/MembersList";
+import FinancialsView from "@/components/FinancialsView";
+import SystemToolsView from "@/components/SystemToolsView";
 
 interface ProtectedRoutesProps {
   session: Session | null;
@@ -78,6 +81,31 @@ const ProtectedRoutes = ({ session }: ProtectedRoutesProps) => {
 
   console.log('Rendering protected content with role:', userRole);
 
+  const renderContent = () => {
+    console.log('Rendering content for tab:', activeTab);
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardView />;
+      case 'users':
+        if (hasRole('admin') || hasRole('collector')) {
+          return <MembersList searchTerm="" userRole={userRole} />;
+        }
+        return null;
+      case 'financials':
+        if (hasRole('admin')) {
+          return <FinancialsView />;
+        }
+        return null;
+      case 'system':
+        if (hasRole('admin')) {
+          return <SystemToolsView />;
+        }
+        return null;
+      default:
+        return <DashboardView />;
+    }
+  };
+
   return (
     <MainLayout
       activeTab={activeTab}
@@ -86,7 +114,7 @@ const ProtectedRoutes = ({ session }: ProtectedRoutesProps) => {
       onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       onTabChange={setActiveTab}
     >
-      <DashboardView />
+      {renderContent()}
     </MainLayout>
   );
 };

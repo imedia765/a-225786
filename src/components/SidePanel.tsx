@@ -19,7 +19,7 @@ interface SidePanelProps {
 
 const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
-  const { userRole, hasRole } = useRoleAccess();
+  const { userRole } = useRoleAccess();
   const { toast } = useToast();
   
   console.log('SidePanel rendered with role:', userRole);
