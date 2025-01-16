@@ -19,7 +19,7 @@ interface SidePanelProps {
 
 const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
-  const { userRole, hasRole, permissions } = useRoleAccess();
+  const { userRole, hasRole } = useRoleAccess();
   const { toast } = useToast();
   
   console.log('SidePanel rendered with role:', userRole);
@@ -32,14 +32,15 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
     console.log('Tab change requested:', tab, 'Current role:', userRole);
     
     // Define role-based access rules
-    const tabAccess = {
+    const tabAccess: Record<string, string[]> = {
       dashboard: ['admin', 'collector', 'member'],
       users: ['admin', 'collector'],
       financials: ['admin'],
       system: ['admin']
     };
 
-    const hasAccess = tabAccess[tab]?.includes(userRole);
+    const hasAccess = userRole && tabAccess[tab]?.includes(userRole);
+    console.log('Access check:', { tab, userRole, hasAccess, allowedRoles: tabAccess[tab] });
 
     if (hasAccess) {
       onTabChange(tab);
@@ -50,6 +51,17 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  // Helper function to determine if a tab should be visible
+  const shouldShowTab = (tab: string): boolean => {
+    const tabAccess: Record<string, string[]> = {
+      dashboard: ['admin', 'collector', 'member'],
+      users: ['admin', 'collector'],
+      financials: ['admin'],
+      system: ['admin']
+    };
+    return userRole ? tabAccess[tab]?.includes(userRole) : false;
   };
 
   return (
@@ -76,7 +88,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
           </Button>
 
           {/* Members - Only for admins and collectors */}
-          {(hasRole('admin') || hasRole('collector')) && (
+          {shouldShowTab('users') && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
@@ -88,7 +100,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
           )}
 
           {/* Financials - Only for admins */}
-          {hasRole('admin') && (
+          {shouldShowTab('financials') && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
@@ -100,7 +112,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
           )}
 
           {/* System - Only for admins */}
-          {hasRole('admin') && (
+          {shouldShowTab('system') && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
