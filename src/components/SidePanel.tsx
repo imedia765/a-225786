@@ -19,7 +19,7 @@ interface SidePanelProps {
 
 const SidePanel = ({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
-  const { userRole, canAccessTab, hasRole, permissions } = useRoleAccess();
+  const { userRole, hasRole, permissions } = useRoleAccess();
   const { toast } = useToast();
   
   console.log('SidePanel rendered with role:', userRole);
@@ -30,7 +30,18 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
 
   const handleTabChange = (tab: string) => {
     console.log('Tab change requested:', tab, 'Current role:', userRole);
-    if (canAccessTab(tab)) {
+    
+    // Define role-based access rules
+    const tabAccess = {
+      dashboard: ['admin', 'collector', 'member'],
+      users: ['admin', 'collector'],
+      financials: ['admin'],
+      system: ['admin']
+    };
+
+    const hasAccess = tabAccess[tab]?.includes(userRole);
+
+    if (hasAccess) {
       onTabChange(tab);
     } else {
       toast({
@@ -54,6 +65,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
       
       <ScrollArea className="flex-1 px-4 lg:px-6">
         <div className="space-y-1.5">
+          {/* Dashboard - Always visible */}
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-sm"
@@ -63,6 +75,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
             Overview
           </Button>
 
+          {/* Members - Only for admins and collectors */}
           {(hasRole('admin') || hasRole('collector')) && (
             <Button
               variant="ghost"
@@ -74,7 +87,8 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
             </Button>
           )}
 
-          {permissions.canManageCollectors && (
+          {/* Financials - Only for admins */}
+          {hasRole('admin') && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
@@ -85,7 +99,8 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
             </Button>
           )}
 
-          {permissions.canAccessSystem && (
+          {/* System - Only for admins */}
+          {hasRole('admin') && (
             <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-sm"
