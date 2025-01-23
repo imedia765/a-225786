@@ -61,8 +61,8 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
       // Safely type check and convert the response
       let typedRpcData: PasswordChangeData | null = null;
       
-      if (rpcData && typeof rpcData === 'object') {
-        typedRpcData = rpcData as PasswordChangeData;
+      if (rpcData && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
+        typedRpcData = rpcData as unknown as PasswordChangeData;
       }
 
       console.log("[PasswordChange] RPC Response:", { 
