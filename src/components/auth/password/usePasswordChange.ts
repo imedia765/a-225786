@@ -41,9 +41,13 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
     const toastId = toast.loading("Changing password...");
 
     try {
-      // Log the attempt
-      console.log("[PasswordChange] Starting password change for member:", memberNumber);
-      logPasswordChangeAttempt(memberNumber, values);
+      // Log the attempt with sanitized data (excluding actual password)
+      console.log("[PasswordChange] Starting password change for member:", memberNumber, {
+        timestamp: new Date().toISOString(),
+        retryCount,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+      });
 
       const { data: rpcData, error } = await supabase.rpc('handle_password_reset', {
         member_number: memberNumber,
@@ -58,22 +62,35 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
         }
       });
 
+      console.log("[PasswordChange] RPC Response received:", {
+        hasData: !!rpcData,
+        hasError: !!error,
+        errorMessage: error?.message,
+        timestamp: new Date().toISOString()
+      });
+
       // Safely type check and convert the response
       let typedRpcData: PasswordChangeData | null = null;
       
       if (rpcData && typeof rpcData === 'object' && !Array.isArray(rpcData)) {
         typedRpcData = rpcData as unknown as PasswordChangeData;
+        console.log("[PasswordChange] Parsed response:", {
+          success: typedRpcData.success,
+          code: typedRpcData.code,
+          message: typedRpcData.message,
+          timestamp: new Date().toISOString()
+        });
       }
 
-      console.log("[PasswordChange] RPC Response:", { 
-        success: typedRpcData?.success,
-        error: error?.message,
-        code: typedRpcData?.code,
-        timestamp: new Date().toISOString()
-      });
-
       if (error) {
-        console.error("[PasswordChange] RPC Error:", error);
+        console.error("[PasswordChange] RPC Error:", {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          timestamp: new Date().toISOString()
+        });
+        
         toast.dismiss(toastId);
         
         if (error.code === 'PGRST301' && retryCount < MAX_RETRIES) {
@@ -86,13 +103,21 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
       }
 
       if (!typedRpcData || !isPasswordChangeData(typedRpcData) || !typedRpcData.success) {
-        console.error("[PasswordChange] Invalid or unsuccessful response:", typedRpcData);
+        console.error("[PasswordChange] Invalid or unsuccessful response:", {
+          data: typedRpcData,
+          timestamp: new Date().toISOString()
+        });
         toast.dismiss(toastId);
         toast.error(typedRpcData && isPasswordChangeData(typedRpcData) ? typedRpcData.message || "Failed to change password" : "Invalid response from server");
         return null;
       }
 
-      console.log("[PasswordChange] Success:", typedRpcData);
+      console.log("[PasswordChange] Success:", {
+        success: typedRpcData.success,
+        message: typedRpcData.message,
+        timestamp: new Date().toISOString()
+      });
+      
       toast.dismiss(toastId);
       toast.success("Password changed successfully");
       
@@ -104,7 +129,10 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
       return typedRpcData;
 
     } catch (error) {
-      console.error("[PasswordChange] Unexpected error:", error);
+      console.error("[PasswordChange] Unexpected error:", {
+        error,
+        timestamp: new Date().toISOString()
+      });
       toast.dismiss(toastId);
       toast.error("An unexpected error occurred");
       return null;
