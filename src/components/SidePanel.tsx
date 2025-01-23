@@ -1,4 +1,4 @@
-import { useCallback, useMemo, memo } from "react";
+import { useCallback, useMemo, memo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,23 @@ const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
   const { userRole, userRoles, roleLoading, hasRole } = useRoleAccess();
   const { toast } = useToast();
   
-  // Memoize navigation items
+  // Use refs to track previous values
+  const prevUserRoleRef = useRef(userRole);
+  const prevUserRolesRef = useRef(userRoles);
+  
+  // Log render causes
+  useEffect(() => {
+    if (prevUserRoleRef.current !== userRole) {
+      console.log('SidePanel rerender: userRole changed', { old: prevUserRoleRef.current, new: userRole });
+      prevUserRoleRef.current = userRole;
+    }
+    if (prevUserRolesRef.current !== userRoles) {
+      console.log('SidePanel rerender: userRoles changed', { old: prevUserRolesRef.current, new: userRoles });
+      prevUserRolesRef.current = userRoles;
+    }
+  }, [userRole, userRoles]);
+
+  // Memoize navigation items with stable reference
   const navigationItems = useMemo(() => [
     {
       name: 'Overview',
@@ -56,7 +72,7 @@ const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
     }
   ], []);
 
-  // Memoize shouldShowTab function
+  // Memoize shouldShowTab with stable dependencies
   const shouldShowTab = useCallback((tab: string): boolean => {
     if (roleLoading) return tab === 'dashboard';
     if (!userRoles || !userRole) return tab === 'dashboard';
@@ -75,8 +91,9 @@ const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
     }
   }, [roleLoading, userRoles, userRole, hasRole]);
 
-  // Memoize handleTabChange
+  // Memoize handleTabChange with stable toast reference
   const handleTabChange = useCallback((tab: string) => {
+    console.log('Tab change requested:', tab);
     if (roleLoading) {
       toast({
         title: "Please wait",
@@ -97,7 +114,9 @@ const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
     }
   }, [roleLoading, shouldShowTab, onTabChange, toast]);
 
+  // Memoize logout handler
   const handleLogoutClick = useCallback(async () => {
+    console.log('Logout initiated');
     try {
       await handleSignOut(false);
     } catch (error) {
@@ -112,16 +131,20 @@ const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
 
   // Memoize role status text
   const roleStatusText = useMemo(() => {
+    console.log('Calculating role status text');
     if (roleLoading) return 'Loading access...';
     return userRole ? `Role: ${userRole}` : 'Access restricted';
   }, [roleLoading, userRole]);
 
-  // Memoize visible navigation items
+  // Memoize visible navigation items with proper dependencies
   const visibleNavigationItems = useMemo(() => {
+    console.log('Calculating visible navigation items');
     return navigationItems.filter(item => 
       item.alwaysShow || (!roleLoading && item.requiresRole?.some(role => userRoles?.includes(role)))
     );
   }, [navigationItems, roleLoading, userRoles]);
+
+  console.log('SidePanel render', { userRole, roleLoading });
 
   return (
     <div className="flex flex-col h-full bg-dashboard-card border-r border-dashboard-cardBorder">
