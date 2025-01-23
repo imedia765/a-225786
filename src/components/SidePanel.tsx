@@ -1,7 +1,7 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, memo } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
   Users, 
@@ -14,6 +14,7 @@ import { useAuthSession } from "@/hooks/useAuthSession";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useToast } from "@/hooks/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import NavItem from "./navigation/NavItem";
 
 type UserRole = Database['public']['Enums']['app_role'];
 
@@ -22,12 +23,12 @@ interface SidePanelProps {
   userRole?: string;
 }
 
-const SidePanel = ({ onTabChange }: SidePanelProps) => {
+const SidePanel = memo(({ onTabChange }: SidePanelProps) => {
   const { handleSignOut } = useAuthSession();
   const { userRole, userRoles, roleLoading, hasRole } = useRoleAccess();
   const { toast } = useToast();
   
-  // Memoize navigation items to prevent recreating on every render
+  // Memoize navigation items
   const navigationItems = useMemo(() => [
     {
       name: 'Overview',
@@ -55,7 +56,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
     }
   ], []);
 
-  // Memoize the shouldShowTab function with proper dependencies
+  // Memoize shouldShowTab function
   const shouldShowTab = useCallback((tab: string): boolean => {
     if (roleLoading) return tab === 'dashboard';
     if (!userRoles || !userRole) return tab === 'dashboard';
@@ -74,7 +75,7 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
     }
   }, [roleLoading, userRoles, userRole, hasRole]);
 
-  // Memoize the handleTabChange function with proper dependencies
+  // Memoize handleTabChange
   const handleTabChange = useCallback((tab: string) => {
     if (roleLoading) {
       toast({
@@ -109,13 +110,13 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
     }
   }, [handleSignOut, toast]);
 
-  // Memoize the role status text
+  // Memoize role status text
   const roleStatusText = useMemo(() => {
     if (roleLoading) return 'Loading access...';
     return userRole ? `Role: ${userRole}` : 'Access restricted';
   }, [roleLoading, userRole]);
 
-  // Memoize the visible navigation items
+  // Memoize visible navigation items
   const visibleNavigationItems = useMemo(() => {
     return navigationItems.filter(item => 
       item.alwaysShow || (!roleLoading && item.requiresRole?.some(role => userRoles?.includes(role)))
@@ -137,20 +138,14 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
       <ScrollArea className="flex-1 px-4 lg:px-6">
         <div className="space-y-1.5 py-4">
           {visibleNavigationItems.map((item) => (
-            <Button
+            <NavItem
               key={item.tab}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start gap-2 text-sm font-medium",
-                "hover:bg-dashboard-hover/10 hover:text-white",
-                "transition-colors duration-200"
-              )}
+              name={item.name}
+              icon={item.icon}
+              tab={item.tab}
               onClick={() => handleTabChange(item.tab)}
               disabled={roleLoading}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.name}
-            </Button>
+            />
           ))}
         </div>
       </ScrollArea>
@@ -168,6 +163,8 @@ const SidePanel = ({ onTabChange }: SidePanelProps) => {
       </div>
     </div>
   );
-};
+});
+
+SidePanel.displayName = "SidePanel";
 
 export default SidePanel;
