@@ -17,13 +17,11 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
   const { userRole, userRoles, roleLoading, hasRole } = useRoleAccess();
   const { toast } = useToast();
 
-  // Use refs to track previous values
   const prevUserRoleRef = useRef(userRole);
   const prevUserRolesRef = useRef(userRoles);
 
   const hasSession = !!session;
 
-  // Log render causes
   useEffect(() => {
     if (!hasSession) {
       console.log('No active session, access will be restricted');
@@ -40,35 +38,29 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
     }
   }, [userRole, userRoles, hasSession]);
 
-  // Memoize navigation items with stable reference
   const navigationItems = useMemo(() => [
     {
       name: 'Overview',
-      href: '/dashboard',
       tab: 'dashboard',
       alwaysShow: true
     },
     {
       name: 'Users',
-      href: '/users',
       tab: 'users',
       requiresRole: ['admin', 'collector'] as const
     },
     {
       name: 'Financials',
-      href: '/financials',
       tab: 'financials',
       requiresRole: ['admin', 'collector'] as const
     },
     {
       name: 'System',
-      href: '/system',
       tab: 'system',
       requiresRole: ['admin'] as const
     }
   ], []);
 
-  // Memoize shouldShowTab with stable dependencies
   const shouldShowTab = useCallback((tab: string): boolean => {
     if (!hasSession) return tab === 'dashboard';
     if (roleLoading) return tab === 'dashboard';
@@ -88,39 +80,6 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
     }
   }, [roleLoading, userRoles, userRole, hasRole, hasSession]);
 
-  // Memoize handleTabChange with stable toast reference
-  const handleTabChange = useCallback((tab: string) => {
-    console.log('Tab change requested:', tab);
-    if (!hasSession) {
-      toast({
-        title: "Access Denied",
-        description: "Please log in to access this feature",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (roleLoading) {
-      toast({
-        title: "Please wait",
-        description: "Loading access permissions...",
-      });
-      return;
-    }
-
-    if (!shouldShowTab(tab)) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access this section",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    onTabChange(tab);
-  }, [roleLoading, shouldShowTab, onTabChange, toast, hasSession]);
-
-  // Memoize logout handler
   const handleLogoutClick = useCallback(async () => {
     console.log('Logout initiated');
     try {
@@ -135,7 +94,6 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
     }
   }, [handleSignOut, toast]);
 
-  // Memoize role status text
   const roleStatusText = useMemo(() => {
     console.log('Calculating role status text');
     if (!hasSession) return 'Not authenticated';
@@ -143,7 +101,6 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
     return userRole ? `Role: ${userRole}` : 'Access restricted';
   }, [roleLoading, userRole, hasSession]);
 
-  // Memoize visible navigation items with proper dependencies
   const visibleNavigationItems = useMemo(() => {
     console.log('Calculating visible navigation items');
     if (!hasSession) return navigationItems.filter(item => item.alwaysShow);
@@ -167,7 +124,7 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
                 <NavItem
                   key={item.tab}
                   name={item.name}
-                  href={item.href}
+                  tab={item.tab}
                   isActive={currentTab === item.tab}
                   onClick={() => handleTabChange(item.tab)}
                 />
