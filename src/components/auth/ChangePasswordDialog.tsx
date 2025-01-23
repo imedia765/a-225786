@@ -51,7 +51,6 @@ const ChangePasswordDialog = ({
   }, [open, memberNumber]);
 
   const handleSuccess = () => {
-    // Close the dialog on successful password change
     console.log("[ChangePasswordDialog] Password change successful, closing dialog");
     onOpenChange(false);
   };

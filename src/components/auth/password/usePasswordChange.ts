@@ -30,16 +30,18 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
     );
   };
 
-  const handlePasswordChange = async (values: PasswordFormValues, retryCount = 0) => {
+  const handlePasswordChange = async (values: PasswordFormValues, retryCount = 0): Promise<PasswordChangeData | null> => {
     if (retryCount >= MAX_RETRIES) {
       toast.error("Maximum retry attempts reached. Please try again later.");
-      return;
+      return null;
     }
 
     setIsSubmitting(true);
     const toastId = toast.loading("Changing password...");
 
     try {
+      console.log("[usePasswordChange] Attempting password change for member:", memberNumber);
+      
       const { data: rpcData, error } = await supabase.rpc('handle_password_reset', {
         member_number: memberNumber,
         new_password: values.newPassword,
@@ -62,29 +64,32 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
         } else {
           toast.error(error.message || "Failed to change password");
         }
-        return;
+        return null;
       }
 
       if (!isPasswordChangeData(rpcData) || !rpcData.success) {
         console.error("[PasswordChange] Invalid response:", rpcData);
         toast.dismiss(toastId);
         toast.error(isPasswordChangeData(rpcData) ? rpcData.message || "Failed to change password" : "Invalid response from server");
-        return;
+        return null;
       }
 
+      console.log("[PasswordChange] Success:", rpcData);
       toast.dismiss(toastId);
       toast.success("Password changed successfully");
       
       if (onSuccess) {
+        console.log("[PasswordChange] Calling onSuccess callback");
         onSuccess();
-      } else {
-        navigate('/');
       }
+
+      return rpcData;
 
     } catch (error) {
       console.error("[PasswordChange] Unexpected error:", error);
       toast.dismiss(toastId);
       toast.error("An unexpected error occurred");
+      return null;
     } finally {
       setIsSubmitting(false);
     }

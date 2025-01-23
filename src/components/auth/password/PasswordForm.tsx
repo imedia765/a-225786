@@ -50,12 +50,19 @@ export const PasswordForm = ({
 
   const handleFormSubmit = async (values: PasswordFormValues) => {
     try {
+      console.log("[PasswordForm] Submitting form...");
       if (onSubmit) {
         await onSubmit(values);
       } else {
-        await handlePasswordChange(values);
+        const result = await handlePasswordChange(values);
+        if (result && result.success) {
+          console.log("[PasswordForm] Password change successful");
+          form.reset();
+          if (onSuccess) {
+            onSuccess();
+          }
+        }
       }
-      form.reset();
     } catch (error) {
       console.error("[PasswordForm] Submit error:", error);
     }
