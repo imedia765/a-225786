@@ -2,7 +2,6 @@ import { useCallback, useMemo, memo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { handleSignOut } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useAuthSession } from "@/hooks/useAuthSession";
@@ -14,13 +13,15 @@ interface SidePanelProps {
 }
 
 const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
-  const { hasSession } = useAuthSession();
+  const { session, handleSignOut } = useAuthSession();
   const { userRole, userRoles, roleLoading, hasRole } = useRoleAccess();
   const { toast } = useToast();
 
   // Use refs to track previous values
   const prevUserRoleRef = useRef(userRole);
   const prevUserRolesRef = useRef(userRoles);
+
+  const hasSession = !!session;
 
   // Log render causes
   useEffect(() => {
@@ -132,7 +133,7 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
         variant: "destructive"
       });
     }
-  }, [toast]);
+  }, [handleSignOut, toast]);
 
   // Memoize role status text
   const roleStatusText = useMemo(() => {
@@ -165,7 +166,8 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
               {visibleNavigationItems.map((item) => (
                 <NavItem
                   key={item.tab}
-                  item={item}
+                  name={item.name}
+                  href={item.href}
                   isActive={currentTab === item.tab}
                   onClick={() => handleTabChange(item.tab)}
                 />
