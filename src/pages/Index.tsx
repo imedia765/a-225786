@@ -12,7 +12,7 @@ import InvalidateRolesButton from '@/components/debug/InvalidateRolesButton';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { userRole, canAccessTab } = useRoleAccess();
+  const { canAccessTab } = useRoleAccess();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -49,7 +49,12 @@ const Index = () => {
   };
 
   return (
-    <MainLayout activeTab={activeTab} userRole={userRole} isSidebarOpen={true} onSidebarToggle={() => {}} onTabChange={setActiveTab}>
+    <MainLayout 
+      activeTab={activeTab} 
+      isSidebarOpen={true} 
+      onSidebarToggle={() => {}} 
+      onTabChange={setActiveTab}
+    >
       {renderContent()}
     </MainLayout>
   );

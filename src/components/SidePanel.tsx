@@ -126,7 +126,7 @@ const SidePanel = memo(({ currentTab, onTabChange }: SidePanelProps) => {
                   name={item.name}
                   tab={item.tab}
                   isActive={currentTab === item.tab}
-                  onClick={() => handleTabChange(item.tab)}
+                  onClick={() => onTabChange(item.tab)}
                 />
               ))}
             </div>

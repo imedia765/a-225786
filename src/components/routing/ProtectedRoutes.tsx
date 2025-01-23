@@ -109,7 +109,6 @@ const ProtectedRoutes = ({ session }: ProtectedRoutesProps) => {
   return (
     <MainLayout
       activeTab={activeTab}
-      userRole={userRole}
       isSidebarOpen={isSidebarOpen}
       onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       onTabChange={setActiveTab}
