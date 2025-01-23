@@ -58,10 +58,13 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
         }
       });
 
+      // Type check the response before accessing properties
+      const typedRpcData = rpcData as PasswordChangeData;
+
       console.log("[PasswordChange] RPC Response:", { 
-        success: rpcData?.success,
+        success: typedRpcData?.success,
         error: error?.message,
-        code: rpcData?.code,
+        code: typedRpcData?.code,
         timestamp: new Date().toISOString()
       });
 
@@ -78,14 +81,14 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
         return null;
       }
 
-      if (!isPasswordChangeData(rpcData) || !rpcData.success) {
-        console.error("[PasswordChange] Invalid or unsuccessful response:", rpcData);
+      if (!isPasswordChangeData(typedRpcData) || !typedRpcData.success) {
+        console.error("[PasswordChange] Invalid or unsuccessful response:", typedRpcData);
         toast.dismiss(toastId);
-        toast.error(isPasswordChangeData(rpcData) ? rpcData.message || "Failed to change password" : "Invalid response from server");
+        toast.error(isPasswordChangeData(typedRpcData) ? typedRpcData.message || "Failed to change password" : "Invalid response from server");
         return null;
       }
 
-      console.log("[PasswordChange] Success:", rpcData);
+      console.log("[PasswordChange] Success:", typedRpcData);
       toast.dismiss(toastId);
       toast.success("Password changed successfully");
       
@@ -94,7 +97,7 @@ export const usePasswordChange = (memberNumber: string, onSuccess?: () => void) 
         onSuccess();
       }
 
-      return rpcData;
+      return typedRpcData;
 
     } catch (error) {
       console.error("[PasswordChange] Unexpected error:", error);
